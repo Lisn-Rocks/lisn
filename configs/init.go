@@ -3,56 +3,62 @@ package configs
 import (
 	_ "embed"
 	"encoding/json"
-	"io"
 	"os"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/sharpvik/log-go/v2"
 )
 
-//go:embed default.json
-var defaultConfigFile []byte
+//go:embed default.yml
+var defaultConfig []byte
 
-// Config contains configuration information for the whole service.
-type Config struct {
-	Database *Database `json:"database"`
-	Server   *Server   `json:"server"`
-}
+// These values are exposed to every other package for reading.
+var (
+	Database *DatabaseConfig
+	Server   *ServerConfig
+)
 
-type Database struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Name     string `json:"name"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-}
-
-type Server struct {
-	Address string `json:"address"`
-}
-
-// MustInit attempts to initialise Config and panics in case of failure.
-func MustInit() (config *Config) {
+func init() {
 	log.Debug("reading config ...")
-	defer log.Debug("config successfull")
-	flags := parseFlags()
-	if flags.ConfigPath == "" {
-		return defaultConfig()
+
+	config := new(Config)
+
+	if isTest := os.Getenv("TEST"); len(isTest) > 0 {
+		readDefaultConfig(config)
+		setValues(config)
+		return
 	}
-	return customConfig(os.Open(flags.ConfigPath))
+
+	flags := parseFlags()
+	if *flags.ConfigPath == "" {
+		readDefaultConfig(config)
+	} else {
+		readCustomConfig(*flags.ConfigPath, config)
+	}
+
+	setValues(config)
+
+	log.Debug("config successfull")
 }
 
-func defaultConfig() (config *Config) {
-	config = new(Config)
-	if err := json.Unmarshal(defaultConfigFile, config); err != nil {
+func readDefaultConfig(config *Config) {
+	if err := yaml.Unmarshal(defaultConfig, config); err != nil {
 		log.Fatal("failed to read default config file: %s", err)
 	}
-	return
 }
 
-func customConfig(file io.Reader, err error) (config *Config) {
-	config = new(Config)
+func readCustomConfig(name string, config *Config) {
+	file, err := os.Open(name)
+	if err != nil {
+		log.Fatal("failed to open custom config file")
+	}
 	if err := json.NewDecoder(file).Decode(config); err != nil {
 		log.Fatal("failed to read default config file: %s", err)
 	}
-	return
+}
+
+func setValues(config *Config) {
+	Database = config.Database
+	Server = config.Server
 }

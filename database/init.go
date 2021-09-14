@@ -1,7 +1,7 @@
 package database
 
 import (
-	"errors"
+	"embed"
 	"fmt"
 	"time"
 
@@ -9,77 +9,68 @@ import (
 	_ "github.com/lib/pq" // the DB driver
 	"github.com/sharpvik/log-go/v2"
 
-	"github.com/sharpvik/micro-go/configs"
-	"github.com/sharpvik/micro-go/migrations"
+	"github.com/lisn-rocks/lisn/configs"
+	"github.com/lisn-rocks/lisn/migrations"
 )
 
-// Database represents the generic database interface.
 type Database struct {
-	Conn   *sqlx.DB
-	Config *configs.Database
+	*sqlx.DB
 }
 
-// MustInit attempts to connect to the database and panics in case of failure.
-func MustInit(config *configs.Database) (db *Database) {
-	var err error
-
+func Init() (db *Database) {
 	details := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		config.Host, config.Port, config.User, config.Password, config.Name)
+		configs.Database.Host,
+		configs.Database.Port,
+		configs.Database.User,
+		configs.Database.Password,
+		configs.Database.Name)
 
-	dbi, err := connect(details, 10)
-	if err != nil {
-		log.Fatal("failed to connect to the database")
-	}
+	conn := connect(details, 10)
 
-	db = &Database{
-		Conn:   dbi,
-		Config: config,
-	}
-
-	db.applyUpMigrations()
+	db = &Database{conn}
+	db.up()
 	return
 }
 
-// connect attempts to connect to the database given a threshold of allowed
-// tries. As soon as there are no more tries left, it returns an error.
-func connect(details string, tries int) (dbi *sqlx.DB, err error) {
+func connect(details string, tries int) *sqlx.DB {
 	if tries < 1 {
-		err = errors.New("database connection attempts limit reached")
-		return
+		log.Fatal("failed to connect to the database")
 	}
-	dbi, err = sqlx.Connect("postgres", details)
+	conn, err := sqlx.Connect("postgres", details)
 	if err != nil {
 		log.Error(err)
 		log.Debug("retrying in a second ...")
 		time.Sleep(1 * time.Second)
 		return connect(details, tries-1)
 	}
+	return conn
+}
+
+func (db *Database) up() {
+	log.Debug("applying migrations ...")
+
+	if err := db.applyAll(migrations.Up); err != nil {
+		log.Errorf("failed to apply migrations: %s", err)
+		log.Debug("retracting changes ...")
+		db.applyAll(migrations.Down)
+	}
+}
+
+func (db *Database) applyAll(fs embed.FS) (err error) {
+	migrations, _ := fs.ReadDir(".")
+	for _, file := range migrations {
+		name := file.Name()
+		log.Debug(name)
+		migration, _ := fs.ReadFile(name)
+		if err := db.apply(migration); err != nil {
+			return err
+		}
+	}
 	return
 }
 
-// up only applies migrations ending with ".up.sql".
-func (db *Database) applyUpMigrations() {
-	migrations, err := migrations.FilterUpMigrations()
-	if err != nil {
-		log.Fatalf("failed to list up migrations: %s", err)
-		return
-	}
-
-	log.Debug("applying migrations ...")
-	for _, file := range migrations {
-		if err := readAndApply(db.Conn, file.Name()); err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
-func readAndApply(conn *sqlx.DB, path string) (err error) {
-	log.Debug(path)
-	migration, err := migrations.ReadFile(path)
-	if err != nil {
-		return
-	}
-	_, err = conn.Exec(string(migration))
+func (db *Database) apply(migration []byte) (err error) {
+	_, err = db.Exec(string(migration))
 	return
 }
