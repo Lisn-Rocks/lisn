@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine3.12 as lisn_builder
+FROM golang:1.17-alpine3.14
 RUN mkdir /lisn
 WORKDIR /lisn
 RUN apk --no-cache add ca-certificates
