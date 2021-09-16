@@ -3,7 +3,7 @@
 ## Test Server
 
 ```bash
-TEST=1 go test ./server
+go test ./server
 ```
 
 ## Start Dev Server

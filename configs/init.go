@@ -19,16 +19,10 @@ var (
 	Server   *ServerConfig
 )
 
-func init() {
+func Init() {
 	log.Debug("reading config ...")
 
 	config := new(Config)
-
-	if isTest := os.Getenv("TEST"); len(isTest) > 0 {
-		readDefaultConfig(config)
-		setValues(config)
-		return
-	}
 
 	flags := parseFlags()
 	if *flags.ConfigPath == "" {

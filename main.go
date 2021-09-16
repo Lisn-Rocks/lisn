@@ -1,13 +1,14 @@
 package main
 
 import (
-	_ "github.com/lisn-rocks/lisn/configs"
+	"github.com/lisn-rocks/lisn/configs"
 	"github.com/lisn-rocks/lisn/server"
 	"github.com/sharpvik/log-go/v2"
 )
 
 func init() {
 	log.SetLevel(log.LevelDebug)
+	configs.Init()
 }
 
 func main() {
