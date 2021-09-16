@@ -10,7 +10,7 @@ func parseFlags() (flags Flags) {
 	defer getopt.ParseV2()
 
 	flags.ConfigPath = getopt.StringLong(
-		"conf", 'c', "", "Specify custom config path")
+		"config", 'c', "", "Specify custom config path")
 
 	return
 }

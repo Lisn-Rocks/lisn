@@ -1,1 +1,0 @@
-create table if not exists example (id serial primary key);

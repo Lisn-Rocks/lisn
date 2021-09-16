@@ -2,7 +2,6 @@ package configs
 
 import (
 	_ "embed"
-	"encoding/json"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -10,49 +9,56 @@ import (
 	"github.com/sharpvik/log-go/v2"
 )
 
-//go:embed default.yml
-var defaultConfig []byte
-
-// These values are exposed to every other package for reading.
 var (
+	/*
+	 * These values are exposed to every other package for reading.
+	 ! But they must not be modified.
+	*/
 	Database *DatabaseConfig
 	Server   *ServerConfig
+
+	//go:embed default.yml
+	defaultConfig []byte
+	config        Config
 )
 
 func Init() {
 	log.Debug("reading config ...")
 
-	config := new(Config)
-
 	flags := parseFlags()
 	if *flags.ConfigPath == "" {
-		readDefaultConfig(config)
+		readDefaultConfig()
 	} else {
-		readCustomConfig(*flags.ConfigPath, config)
+		readCustomConfig(*flags.ConfigPath)
 	}
 
-	setValues(config)
+	setValues()
 
 	log.Debug("config successfull")
 }
 
-func readDefaultConfig(config *Config) {
-	if err := yaml.Unmarshal(defaultConfig, config); err != nil {
-		log.Fatal("failed to read default config file: %s", err)
+func Default() {
+	readDefaultConfig()
+	setValues()
+}
+
+func readDefaultConfig() {
+	if err := yaml.Unmarshal(defaultConfig, &config); err != nil {
+		log.Fatalf("failed to read default config file: %s", err)
 	}
 }
 
-func readCustomConfig(name string, config *Config) {
+func readCustomConfig(name string) {
 	file, err := os.Open(name)
 	if err != nil {
 		log.Fatal("failed to open custom config file")
 	}
-	if err := json.NewDecoder(file).Decode(config); err != nil {
-		log.Fatal("failed to read default config file: %s", err)
+	if err := yaml.NewDecoder(file).Decode(&config); err != nil {
+		log.Fatalf("failed to read custom config file: %s", err)
 	}
 }
 
-func setValues(config *Config) {
+func setValues() {
 	Database = config.Database
 	Server = config.Server
 }

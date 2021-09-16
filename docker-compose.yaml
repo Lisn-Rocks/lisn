@@ -2,15 +2,15 @@ version: "3"
 
 services:
   srv:
-    container_name: micro_srv
+    container_name: lisn_srv
     build: .
     ports:
-      - 8000:8000
+      - 80:80
     depends_on:
       - db
 
   db:
-    container_name: micro_db
+    container_name: lisn_db
     image: postgres:13-alpine
     env_file:
       - db.env

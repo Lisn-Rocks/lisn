@@ -51,9 +51,15 @@ func (db *Database) up() {
 	log.Debug("applying migrations ...")
 
 	if err := db.applyAll(migrations.Up); err != nil {
-		log.Errorf("failed to apply migrations: %s", err)
+		log.Errorf("failed to apply up migrations: %s", err)
 		log.Debug("retracting changes ...")
 		db.applyAll(migrations.Down)
+	}
+}
+
+func (db *Database) Down() {
+	if err := db.applyAll(migrations.Down); err != nil {
+		log.Errorf("failed to apply down migrations: %s", err)
 	}
 }
 
