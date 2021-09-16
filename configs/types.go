@@ -1,18 +1,18 @@
 package configs
 
 type Config struct {
-	Database *DatabaseConfig `json:"database"`
-	Server   *ServerConfig   `json:"server"`
+	Database *DatabaseConfig `yaml:"database"`
+	Server   *ServerConfig   `yaml:"server"`
 }
 
 type DatabaseConfig struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Name     string `json:"name"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Name     string `yaml:"name"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 type ServerConfig struct {
-	Address string `json:"address"`
+	Address string `yaml:"address"`
 }
